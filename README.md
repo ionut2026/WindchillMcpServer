@@ -1,5 +1,11 @@
 # Windchill RV&S MCP Server
 
+Independent private repository: https://github.com/ionut2026/WindchillMcpServer.
+Use a permanent D: checkout, for example `D:\projects\WindchillMcpServer`.
+Set `RVS_EXPORT_DIR` explicitly (for example `D:\projects\WindchillMcpServer\exports`) before exporting.
+The historical installation examples below are portable examples, not instructions to modify the active Copilot
+configuration during repository cutover. Preserve each user's existing RV&S authentication and connection settings.
+
 An [MCP](https://modelcontextprotocol.io) server that provides **read-only** access to Windchill RV&S (formerly PTC
 Integrity / MKS) from GitHub Copilot, the included no-AI `rvs` terminal client, MCP Inspector, or another MCP client:
 projects, user stories, requirements, specifications, documents, test cases, test sessions/results, complaints,
