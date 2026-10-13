@@ -2,7 +2,7 @@
 // checks prerequisites, installs dependencies, compiles the Java bridge, tests the RV&S connection and
 // registers the server with Copilot CLI and VS Code. Uses only Node built-ins so it runs before 'npm install'.
 // Usage: setup.cmd [--host alm.stratec.com] [--port 7001] [--client-home "C:\...\ILMClient13"]
-//                  [--no-cli] [--no-vscode] [--no-instructions] [--skip-test] [--help]
+//                  [--no-terminal] [--no-cli] [--no-vscode] [--no-instructions] [--skip-test] [--help]
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -24,6 +24,7 @@ Options:
   --host <name>          RV&S server host        (default: $RVS_HOSTNAME or alm.stratec.com)
   --port <n>             RV&S server port        (default: $RVS_PORT or 7001)
   --client-home <dir>    RV&S client folder      (default: auto-detected)
+  --no-terminal          don't link the global rvs terminal command
   --no-cli               don't register with GitHub Copilot CLI
   --no-vscode            don't register with VS Code
   --no-instructions      don't install the Copilot search playbook
@@ -32,7 +33,7 @@ Options:
 `;
 
 // ---------- arguments ----------
-const args = { cli: true, vscode: true, instructions: true, test: true };
+const args = { terminal: true, cli: true, vscode: true, instructions: true, test: true };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
@@ -47,6 +48,7 @@ for (let i = 0; i < argv.length; i++) {
   } else if (a === "--host") args.host = val();
   else if (a === "--port") args.port = val();
   else if (a === "--client-home") args.clientHome = val();
+  else if (a === "--no-terminal") args.terminal = false;
   else if (a === "--no-cli") args.cli = false;
   else if (a === "--no-vscode") args.vscode = false;
   else if (a === "--no-instructions") args.instructions = false;
@@ -60,7 +62,7 @@ if (!/^\d+$/.test(port)) fail(`Invalid port '${port}'.`);
 // ---------- helpers ----------
 const warnings = [];
 let stepNo = 0;
-const TOTAL = 7;
+const TOTAL = 8;
 function step(title) {
   console.log(`\n[${++stepNo}/${TOTAL}] ${title}`);
 }
@@ -132,7 +134,18 @@ if (npm.status !== 0) fail("'npm install' failed (see the output above). Check n
 if (!fs.existsSync(path.join(ROOT, "build", "classes", "RvsBridge.class"))) fail("Java bridge was not compiled (build\\classes\\RvsBridge.class missing).");
 ok("dependencies installed, bridge compiled to build\\classes");
 
-// ---------- 4. Copilot CLI ----------
+// ---------- 4. Terminal command ----------
+step("Linking the rvs terminal command to this installation");
+if (!args.terminal) info("skipped (--no-terminal)");
+else {
+  const link = spawnSync("npm link --ignore-scripts --no-audit --no-fund --loglevel=error", {
+    cwd: ROOT, env, stdio: "inherit", shell: true,
+  });
+  if (link.status !== 0) fail("'npm link' failed. Check permissions on the npm global prefix, or use --no-terminal.");
+  ok(`rvs -> ${ROOT}`);
+}
+
+// ---------- 5. Copilot CLI ----------
 step("Registering with GitHub Copilot CLI");
 const serverEnv = { RVS_HOSTNAME: host, RVS_PORT: port };
 if (path.resolve(clientHome).toLowerCase() !== DEFAULT_CLIENT.toLowerCase()) serverEnv.RVS_CLIENT_HOME = clientHome;
@@ -151,7 +164,7 @@ else {
   }
 }
 
-// ---------- 5. VS Code ----------
+// ---------- 6. VS Code ----------
 step("Registering with VS Code");
 if (!args.vscode) info("skipped (--no-vscode)");
 else {
@@ -173,7 +186,7 @@ else {
   }
 }
 
-// ---------- 6. Copilot instructions ----------
+// ---------- 7. Copilot instructions ----------
 step("Installing the Copilot search playbook");
 if (!args.instructions) info("skipped (--no-instructions)");
 else {
@@ -182,7 +195,7 @@ else {
   else warn(`Could not install the playbook: ${r.stderr || r.stdout}`);
 }
 
-// ---------- 7. Connection test ----------
+// ---------- 8. Connection test ----------
 step(`Testing the connection to ${host}:${port}`);
 if (!args.test) info("skipped (--skip-test)");
 else {

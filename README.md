@@ -3,6 +3,9 @@
 Independent private repository: https://github.com/ionut2026/WindchillMcpServer.
 Use a permanent D: checkout, for example `D:\projects\WindchillMcpServer`.
 Set `RVS_EXPORT_DIR` explicitly (for example `D:\projects\WindchillMcpServer\exports`) before exporting.
+Without an override, the terminal client uses `exports` inside its own installation, never the parent project or
+the terminal's current folder. Setup links the global `rvs` command to that installation; re-run `npm link` from
+the new checkout after moving it. `rvs help` shows the active installation and export directory.
 The historical installation examples below are portable examples, not instructions to modify the active Copilot
 configuration during repository cutover. Preserve each user's existing RV&S authentication and connection settings.
 
@@ -97,7 +100,7 @@ cd C:\tools\rvs-mcp-server
 Every step should show `OK`. The last lines tell you which Integrity user you're connected as:
 
 ```
-[7/7] Testing the connection to alm.stratec.com:7001
+[8/8] Testing the connection to alm.stratec.com:7001
       OK   Windchill RV&S 13 13.2.0.4_986 (API 4.16.2)
       OK   connected to stratec-ptc11.intern.stratec.com:7001 as Integrity user 'IPop'
       OK   102 item types visible
@@ -141,10 +144,11 @@ Setup exit codes: `0` = OK, `1` = failed, `2` = finished with warnings.
 | 1. Node.js        | Checks that Node.js 18+ is installed.                                                                     |
 | 2. RV&S client    | Finds the client in `Program Files\Integrity`, `PTC` or `MKS` (or uses `--client-home`).                  |
 | 3. npm install    | Installs the two dependencies and compiles the Java bridge with the client's own Java (no JDK needed).    |
-| 4. Copilot CLI    | Adds `windchill` to `%USERPROFILE%\.copilot\mcp-config.json`.                                         |
-| 5. VS Code        | Adds `windchill` to `%APPDATA%\Code\User\mcp.json` (and VS Code Insiders, if installed).              |
-| 6. Playbook       | Installs `%USERPROFILE%\.copilot\instructions\windchill.instructions.md` so Copilot searches RV&S on its own. |
-| 7. Test           | Connects to RV&S and shows the version, the server and your Integrity user.                               |
+| 4. Terminal       | Links the global `rvs` command to this installation, replacing a link to an older checkout.               |
+| 5. Copilot CLI    | Adds `windchill` to `%USERPROFILE%\.copilot\mcp-config.json`.                                         |
+| 6. VS Code        | Adds `windchill` to `%APPDATA%\Code\User\mcp.json` (and VS Code Insiders, if installed).              |
+| 7. Playbook       | Installs `%USERPROFILE%\.copilot\instructions\windchill.instructions.md` so Copilot searches RV&S on its own. |
+| 8. Test           | Connects to RV&S and shows the version, the server and your Integrity user.                               |
 
 Existing entries for other MCP servers are kept, and the previous config files are saved as `.bak`.
 The setup can be run again at any time, for example after an update. `npm run setup` does the same as `.\setup.cmd`.
@@ -156,6 +160,7 @@ The setup can be run again at any time, for example after an update. `npm run se
 | `--host <name>`       | `alm.stratec.com`  | connect to another RV&S server                         |
 | `--port <n>`          | `7001`             | use another port                                       |
 | `--client-home <dir>` | auto-detected      | point to a client installed in an unusual folder       |
+| `--no-terminal`       |                    | skip linking the global `rvs` terminal command          |
 | `--no-cli`            |                    | skip Copilot CLI registration                          |
 | `--no-vscode`         |                    | skip VS Code registration                              |
 | `--no-instructions`   |                    | skip the Copilot playbook                              |

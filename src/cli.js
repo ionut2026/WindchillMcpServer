@@ -5,10 +5,12 @@ import { fileURLToPath } from "node:url";
 import { dirname, isAbsolute, resolve } from "node:path";
 
 const SERVER_PATH = fileURLToPath(new URL("./server.js", import.meta.url));
-// Exports go to <repo root>\exports (the folder next to windchill-mcp-server) unless RVS_EXPORT_DIR is set.
-const EXPORT_DIR = process.env.RVS_EXPORT_DIR || fileURLToPath(new URL("../../exports", import.meta.url));
+const ROOT = fileURLToPath(new URL("../", import.meta.url));
+const EXPORT_DIR = process.env.RVS_EXPORT_DIR || resolve(ROOT, "exports");
 
 const HELP = `Windchill RV&S terminal client (no AI)
+
+Installation: ${ROOT}
 
 Usage:
   rvs <command> [arguments] [options]
@@ -27,7 +29,7 @@ Commands:
   query <name>              Run a saved query
   export                    Search, then export every match with full details as Markdown
                             (same filters as search; --field, --limit up to 1000, --json)
-                            Saved to ${EXPORT_DIR} (override with RVS_EXPORT_DIR):
+                            Saved to ${EXPORT_DIR} (override with an absolute RVS_EXPORT_DIR):
                             --out <name> sets the file name (default rvs-export-<date>.md);
                             absolute --out paths are used as given; --stdout prints instead
   help                      Show this help
@@ -409,6 +411,9 @@ function exportMarkdown(items, { filters, total }) {
 }
 
 function exportPath(options) {
+  if (!isAbsolute(EXPORT_DIR)) {
+    throw new Error("RVS_EXPORT_DIR must be an absolute directory path.");
+  }
   const now = new Date();
   const pad = (n) => String(n).padStart(2, "0");
   const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`;
@@ -416,8 +421,7 @@ function exportPath(options) {
   return isAbsolute(name) ? name : resolve(EXPORT_DIR, name);
 }
 
-async function runExport(client, options) {
-  const out = options.has("stdout") ? undefined : exportPath(options);
+async function runExport(client, options, out) {
   const filters = filterArguments(options);
   const limit = numberOption(options, "limit", 1000, 1, 1000);
   const timeout = Number(process.env.RVS_TIMEOUT_MS) || 600000;
@@ -466,10 +470,12 @@ async function main() {
 
   const { positional, options } = parseArgs(args);
   const request = commandArguments(command, positional, options);
+  const out = request.name === "export" && !options.has("stdout") ? exportPath(options) : undefined;
   const env = Object.fromEntries(Object.entries(process.env).filter(([, value]) => value !== undefined));
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [SERVER_PATH],
+    cwd: ROOT,
     env,
   });
   const client = new Client({ name: "windchill-terminal-client", version: "1.0.0" });
@@ -477,7 +483,7 @@ async function main() {
   try {
     await client.connect(transport);
     if (request.name === "export") {
-      await runExport(client, options);
+      await runExport(client, options, out);
       return;
     }
     const result = await client.callTool(request);

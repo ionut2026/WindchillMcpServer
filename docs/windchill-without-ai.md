@@ -32,8 +32,8 @@ summarize results.
    npm --version
    ```
 
-4. Have a local copy of the `windchill-mcp-server` folder in a stable location. The examples below assume:
-   `D:\projects\AI-TestBench\windchill-mcp-server`.
+4. Have a local copy of the server repository in a stable location. The examples below assume:
+   `D:\projects\WindchillMcpServer`.
    If yours is elsewhere, replace that path in the commands.
 
 ## One-time setup (without Copilot registration)
@@ -41,11 +41,12 @@ summarize results.
 Open PowerShell and run:
 
 ```powershell
-Set-Location 'D:\projects\AI-TestBench\windchill-mcp-server'
+Set-Location 'D:\projects\WindchillMcpServer'
 .\setup.cmd --no-cli --no-vscode --no-instructions
 ```
 
-This setup installs the server's npm dependencies, compiles its Java bridge, and tests the RV&S connection. The three
+This setup installs the server's npm dependencies, compiles its Java bridge, links the global `rvs` command to this
+installation, and tests the RV&S connection. Use `--no-terminal` to skip the global command link. The three
 options prevent it from registering anything with Copilot CLI or VS Code, or installing Copilot instructions.
 They do **not** disable any server tools.
 
@@ -72,15 +73,17 @@ service. Each command starts the local MCP server, makes a request, prints the r
 
 ### One-time setup: enable the `rvs` command
 
-Register the local package as a global command once:
+Setup already registers the local package as a global command. If you skipped that step, moved the installation,
+or need to replace a link to an older checkout, run:
 
 ```powershell
-Set-Location 'D:\projects\AI-TestBench\windchill-mcp-server'
+Set-Location 'D:\projects\WindchillMcpServer'
 npm link
 rvs help
 ```
 
 After that, run `rvs <command> ...` directly from any folder, in any new terminal. No `npm run` is needed.
+`rvs help` shows the installation and export directory so you can confirm which checkout is active.
 
 - `npm link` creates a link to this local folder; it does not copy or publish anything. Code changes in the folder
   take effect immediately.
@@ -166,11 +169,14 @@ Markdown: an index table, then one section per item. Each section lists the fiel
 complaints, and the full Description text (Definition / Acceptance Criteria / Out of Scope).
 
 ```powershell
+$env:RVS_EXPORT_DIR = 'D:\projects\WindchillMcpServer\exports'
 rvs export --type "user story" --state Tested --text PRA --text-field Summary --out pra-tested.md
 ```
 
-- Files are always saved in the `exports` folder of the repository (`D:\projects\AI-TestBench\exports`), no matter
-  which folder you run the command from. The folder is created if needed. Set `RVS_EXPORT_DIR` to use another folder.
+- Files default to `exports` inside the installed server repository (`D:\projects\WindchillMcpServer\exports` in
+  this example), never its parent or the terminal's current folder. The folder is created if needed.
+  Set `RVS_EXPORT_DIR` to an absolute path to designate another folder; relative overrides are rejected.
+  The assignment above applies to the current terminal. Each user chooses their own installation and export path.
 - `--out <name>` sets the file name; without it the name is `rvs-export-<yyyyMMdd-HHmm>.md`. An absolute `--out`
   path is used as given.
 - `--stdout` prints the Markdown to the terminal instead of saving a file.
@@ -225,8 +231,8 @@ arguments, run it, and inspect the raw response.
 1. In PowerShell, set the folder and launch Inspector with this server as its stdio target:
 
    ```powershell
-   Set-Location 'D:\projects\AI-TestBench\windchill-mcp-server'
-   npx -y @modelcontextprotocol/inspector node 'D:\projects\AI-TestBench\windchill-mcp-server\src\server.js'
+   Set-Location 'D:\projects\WindchillMcpServer'
+   npx -y @modelcontextprotocol/inspector node 'D:\projects\WindchillMcpServer\src\server.js'
    ```
 
    The first launch downloads Inspector from npm if it is not already cached, so internet or npm-registry access may
@@ -239,7 +245,7 @@ arguments, run it, and inspect the raw response.
    $env:RVS_CLIENT_HOME = 'D:\PTC\ILMClient13'
    $env:RVS_HOSTNAME = 'alm.example.com'
    $env:RVS_PORT = '7001'
-   npx -y @modelcontextprotocol/inspector node 'D:\projects\AI-TestBench\windchill-mcp-server\src\server.js'
+   npx -y @modelcontextprotocol/inspector node 'D:\projects\WindchillMcpServer\src\server.js'
    ```
 
 2. Open the local address printed in the terminal (the Inspector usually opens its web UI automatically). Keep the
@@ -299,7 +305,7 @@ README's [tool reference](../README.md#tools), [text search notes](../README.md#
 This option is useful if you want a saved, repeatable query or need to process the returned data. The server already
 depends on the MCP SDK, so you can use that installation; no AI SDK or AI service is involved.
 
-1. Create a file named `manual-query.mjs` in the `windchill-mcp-server` folder.
+1. Create a file named `manual-query.mjs` in the server repository folder.
 2. Paste the following example. It connects to the local server process, lists the tools available, runs the PRA
    search, prints the response as JSON, and closes the connection:
 
@@ -307,7 +313,7 @@ depends on the MCP SDK, so you can use that installation; no AI SDK or AI servic
    import { Client } from "@modelcontextprotocol/sdk/client/index.js";
    import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
-   const serverPath = String.raw`D:\projects\AI-TestBench\windchill-mcp-server\src\server.js`;
+   const serverPath = String.raw`D:\projects\WindchillMcpServer\src\server.js`;
    const transport = new StdioClientTransport({
      command: process.execPath,
      args: [serverPath],
@@ -345,7 +351,7 @@ depends on the MCP SDK, so you can use that installation; no AI SDK or AI servic
    }
    ```
 
-3. If your server directory is not `D:\projects\AI-TestBench\windchill-mcp-server`, update `serverPath`.
+3. If your server directory is not `D:\projects\WindchillMcpServer`, update `serverPath`.
 4. If your RV&S host or port differs, replace `alm.stratec.com` / `7001`, or set the values in PowerShell before
    running the script:
 
@@ -357,7 +363,7 @@ depends on the MCP SDK, so you can use that installation; no AI SDK or AI servic
 5. Run it from the server folder so Node can resolve the installed SDK:
 
    ```powershell
-   Set-Location 'D:\projects\AI-TestBench\windchill-mcp-server'
+   Set-Location 'D:\projects\WindchillMcpServer'
    node .\manual-query.mjs
    ```
 
